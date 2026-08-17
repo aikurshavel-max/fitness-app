@@ -6,6 +6,7 @@ import Stats from './pages/Stats';
 import Goals from './pages/Goals';
 import Profile from './pages/Profile';
 import Photos from './pages/Photos';
+import Workouts from './pages/Workouts';
 import BottomNav from './components/BottomNav';
 import { db } from './db/database';
 
@@ -22,6 +23,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/diary" element={<FoodDiary />} />
+          <Route path="/workouts" element={<Workouts />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/photos" element={<Photos />} />
           <Route path="/goals" element={<Goals />} />

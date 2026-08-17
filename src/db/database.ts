@@ -91,14 +91,14 @@ export class FitnessDatabase extends Dexie {
 
   constructor() {
     super('fitness-app');
-    this.version(1).stores({
+    this.version(2).stores({
       userProfile: '++id',
       foodItems: '++id, name, source',
       foodEntries: '++id, date, meal',
       weightEntries: '++id, date',
       waterLogs: '++id, date',
       photoEntries: '++id, date',
-      workoutLogs: '++id, date, type',
+      workoutLogs: '++id, date, type, createdAt',
       userGoals: '++id, type, isActive',
     });
   }

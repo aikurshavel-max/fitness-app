@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Utensils, BarChart3, Target, User, Camera } from 'lucide-react';
+import { Home, Utensils, BarChart3, Target, User, Camera, Dumbbell } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'Сьогодні', icon: Home },
   { to: '/diary', label: 'Їжа', icon: Utensils },
+  { to: '/workouts', label: 'Спорт', icon: Dumbbell },
   { to: '/stats', label: 'Статистика', icon: BarChart3 },
   { to: '/photos', label: 'Фото', icon: Camera },
   { to: '/goals', label: 'Цілі', icon: Target },
