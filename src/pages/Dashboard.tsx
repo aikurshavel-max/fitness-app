@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../db/database';
 import { calculateWaterTarget } from '../utils/calculations';
 import WaterTracker from '../components/WaterTracker';
+import AIAssistant from '../components/AIAssistant';
 import { Utensils } from 'lucide-react';
 
 export default function Dashboard() {
@@ -13,14 +14,12 @@ export default function Dashboard() {
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    // Завантаження профілю
     db.userProfile.toArray().then((profiles) => {
       if (profiles.length > 0) {
         const p = profiles[0];
         setUserName(p.name);
         setWaterTarget(calculateWaterTarget(p.currentWeightKg));
-        
-        // Розрахунок цільових калорій
+
         const activityFactors = {
           sedentary: 1.2,
           light: 1.375,
@@ -34,7 +33,6 @@ export default function Dashboard() {
       }
     });
 
-    // Завантаження калорій за сьогодні
     db.foodEntries.where('date').equals(today).toArray().then(async (entries) => {
       let total = 0;
       for (const entry of entries) {
@@ -52,6 +50,9 @@ export default function Dashboard() {
       <h1 className="text-2xl font-bold text-gray-800 mb-4">
         {userName ? `Привіт, ${userName}! 👋` : 'Сьогодні'}
       </h1>
+
+      {/* AI-асистент */}
+      <AIAssistant />
 
       {/* Картка калорій */}
       <div className="bg-white rounded-2xl shadow-md p-4 mb-4">
@@ -74,16 +75,6 @@ export default function Dashboard() {
 
       {/* Трекер води */}
       <WaterTracker waterTarget={waterTarget} />
-
-      {/* Заглушка для майбутніх блоків */}
-      <div className="mt-4 bg-white rounded-2xl shadow-md p-4 text-center">
-        <p className="text-gray-400 text-sm">
-          Більше функцій з'явиться скоро:
-        </p>
-        <p className="text-gray-400 text-sm mt-1">
-          📸 Фото прогресу | 💪 Тренування | 🤖 AI-асистент
-        </p>
-      </div>
     </div>
   );
 }
