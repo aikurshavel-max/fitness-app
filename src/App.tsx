@@ -5,6 +5,7 @@ import FoodDiary from './pages/FoodDiary';
 import Stats from './pages/Stats';
 import Goals from './pages/Goals';
 import Profile from './pages/Profile';
+import Photos from './pages/Photos';
 import BottomNav from './components/BottomNav';
 import { db } from './db/database';
 
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/diary" element={<FoodDiary />} />
           <Route path="/stats" element={<Stats />} />
+          <Route path="/photos" element={<Photos />} />
           <Route path="/goals" element={<Goals />} />
           <Route path="/profile" element={<Profile />} />
         </Routes>
