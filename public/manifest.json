@@ -1,0 +1,10 @@
+{
+  "name": "Fitness App",
+  "short_name": "Fitness",
+  "description": "Персональний тренер та нутриціолог",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff5f7",
+  "theme_color": "#f472b6",
+  "icons": []
+}
