@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../db/database';
 import { calculateAll, calculateWaterTarget } from '../utils/calculations';
 import type { ActivityLevel, Goal } from '../utils/calculations';
+import { Download, Upload, Save } from 'lucide-react';
 
 interface ProfileProps {
   onProfileSaved?: () => void;
@@ -60,6 +61,111 @@ export default function Profile({ onProfileSaved }: ProfileProps) {
       onProfileSaved();
     }
     alert('Профіль збережено! 🎉');
+  };
+
+  // ====== ЕКСПОРТ ДАНИХ ======
+  const handleExport = async () => {
+    try {
+      const userProfile = await db.userProfile.toArray();
+      const foodItems = await db.foodItems.toArray();
+      const foodEntries = await db.foodEntries.toArray();
+      const weightEntries = await db.weightEntries.toArray();
+      const waterLogs = await db.waterLogs.toArray();
+      const workoutLogs = await db.workoutLogs.toArray();
+      const userGoals = await db.userGoals.toArray();
+
+      const exportData = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        data: {
+          userProfile,
+          foodItems,
+          foodEntries,
+          weightEntries,
+          waterLogs,
+          workoutLogs,
+          userGoals,
+        },
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fitness-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Помилка експорту:', error);
+      alert('Не вдалося експортувати дані');
+    }
+  };
+
+  // ====== ІМПОРТ ДАНИХ ======
+  const handleImportClick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const json = JSON.parse(event.target?.result as string);
+          if (!json.data) {
+            alert('Некоректний файл бекапу');
+            return;
+          }
+
+          if (!window.confirm('Це замінить всі поточні дані! Продовжити?')) {
+            return;
+          }
+
+          const data = json.data;
+
+          // Очищаємо всі таблиці (крім фото, якщо не експортуємо)
+          await db.userProfile.clear();
+          await db.foodItems.clear();
+          await db.foodEntries.clear();
+          await db.weightEntries.clear();
+          await db.waterLogs.clear();
+          await db.workoutLogs.clear();
+          await db.userGoals.clear();
+
+          // Додаємо дані
+          if (data.userProfile) await db.userProfile.bulkAdd(data.userProfile);
+          if (data.foodItems) await db.foodItems.bulkAdd(data.foodItems);
+          if (data.foodEntries) await db.foodEntries.bulkAdd(data.foodEntries);
+          if (data.weightEntries) await db.weightEntries.bulkAdd(data.weightEntries);
+          if (data.waterLogs) await db.waterLogs.bulkAdd(data.waterLogs);
+          if (data.workoutLogs) await db.workoutLogs.bulkAdd(data.workoutLogs);
+          if (data.userGoals) await db.userGoals.bulkAdd(data.userGoals);
+
+          // Оновлюємо профіль на екрані
+          if (data.userProfile && data.userProfile.length > 0) {
+            const p = data.userProfile[0];
+            setName(p.name);
+            setBirthYear(p.birthYear);
+            setHeightCm(p.heightCm);
+            setCurrentWeightKg(p.currentWeightKg);
+            setGoalWeightKg(p.goalWeightKg);
+            setGoal(p.goal);
+            setActivityLevel(p.activityLevel);
+            setGender(p.gender || 'female');
+            setIsSaved(true);
+            if (onProfileSaved) onProfileSaved();
+          }
+
+          alert('Дані успішно імпортовано!');
+        } catch (error) {
+          console.error('Помилка імпорту:', error);
+          alert('Не вдалося імпортувати дані');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   };
 
   const calculation = calculateAll({
@@ -222,8 +328,9 @@ export default function Profile({ onProfileSaved }: ProfileProps) {
         {/* Кнопка збереження */}
         <button
           onClick={handleSave}
-          className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary-dark transition-colors"
+          className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
         >
+          <Save size={20} />
           {isSaved ? 'Оновити профіль' : 'Зберегти профіль'}
         </button>
       </div>
@@ -278,6 +385,28 @@ export default function Profile({ onProfileSaved }: ProfileProps) {
                 <p className="text-xs text-gray-500">Вуглеводи</p>
               </div>
             </div>
+          </div>
+
+          {/* Експорт/Імпорт */}
+          <div className="border-t border-gray-200 pt-4 space-y-2">
+            <p className="text-sm font-medium text-gray-700 text-center">Бекап даних</p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleExport}
+                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+              >
+                <Download size={16} />
+                Експорт
+              </button>
+              <button
+                onClick={handleImportClick}
+                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+              >
+                <Upload size={16} />
+                Імпорт
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 text-center">Зберігайте бекап, щоб не втратити дані при зміні пристрою.</p>
           </div>
         </div>
       )}
