@@ -25,6 +25,30 @@ interface DailyData {
   streak: number;
 }
 
+// Допоміжна функція для правильних закінчень
+function getGenderForms(gender: 'male' | 'female') {
+  if (gender === 'male') {
+    return {
+      ate: 'з\'їв',
+      drink: 'пив',
+      burned: 'спалив',
+      lost: 'схуд',
+      gained: 'набрав',
+      exceeded: 'перевищив',
+      completed: 'виконав',
+    };
+  }
+  return {
+    ate: 'з\'їла',
+    drink: 'пила',
+    burned: 'спалила',
+    lost: 'схудла',
+    gained: 'набрала',
+    exceeded: 'перевищила',
+    completed: 'виконала',
+  };
+}
+
 export async function generateAssistantMessages(): Promise<AssistantMessage[]> {
   const messages: AssistantMessage[] = [];
   const today = new Date().toISOString().split('T')[0];
@@ -41,6 +65,9 @@ export async function generateAssistantMessages(): Promise<AssistantMessage[]> {
   }
 
   const profile = profiles[0];
+  const gender = profile.gender || 'female';
+  const g = getGenderForms(gender);
+
   const calculation = calculateAll({
     birthYear: profile.birthYear,
     heightCm: profile.heightCm,
@@ -125,7 +152,7 @@ export async function generateAssistantMessages(): Promise<AssistantMessage[]> {
     messages.push({
       id: 'calories-empty',
       type: 'info',
-      text: `${userName}, ти ще не їла сьогодні. Твій план: ${data.targetCalories} ккал. Пропоную почати з корисного сніданку: вівсянка з ягодами + яйце + склянка води. 🍳`,
+      text: `${userName}, ти ще не ${g.ate} сьогодні. Твій план: ${data.targetCalories} ккал. Пропоную почати з корисного сніданку: вівсянка з ягодами + яйце + склянка води. 🍳`,
       icon: '🍳',
     });
   } else if (caloriePercentage < 50) {
@@ -133,7 +160,7 @@ export async function generateAssistantMessages(): Promise<AssistantMessage[]> {
     messages.push({
       id: 'calories-low',
       type: 'tip',
-      text: `${userName}, ти з'їла ${calories} ккал. Залишилось ${remaining} ккал. Рекомендую додати білок (курка, риба, сир) та овочі. Ось приклад: 150г курячої грудки + салат з огірків і помідорів. 🥗`,
+      text: `${userName}, ти ${g.ate} ${calories} ккал. Залишилось ${remaining} ккал. Рекомендую додати білок (курка, риба, сир) та овочі. Ось приклад: 150г курячої грудки + салат з огірків і помідорів. 🥗`,
       icon: '🥗',
     });
   } else if (caloriePercentage <= 100) {
@@ -148,7 +175,7 @@ export async function generateAssistantMessages(): Promise<AssistantMessage[]> {
     messages.push({
       id: 'calories-over-slight',
       type: 'warning',
-      text: `${userName}, ти трохи перевищила норму (${calories} з ${data.targetCalories}). Не хвилюйся! Просто зроби акцент на овочах і воді до кінця дня. 🥦`,
+      text: `${userName}, ти трохи ${g.exceeded} норму (${calories} з ${data.targetCalories}). Не хвилюйся! Просто зроби акцент на овочах і воді до кінця дня. 🥦`,
       icon: '🥦',
     });
   } else {
@@ -185,7 +212,7 @@ export async function generateAssistantMessages(): Promise<AssistantMessage[]> {
     messages.push({
       id: 'water-empty',
       type: 'warning',
-      text: `${userName}, ти ще не пила воду! Норма — ${waterTarget} мл. Випий зараз склянку (250 мл). Вода прискорює метаболізм і допомагає схуднути! 💧`,
+      text: `${userName}, ти ще не ${g.drink} воду! Норма — ${waterTarget} мл. Випий зараз склянку (250 мл). Вода прискорює метаболізм і допомагає схуднути! 💧`,
       icon: '💧',
     });
   } else if (waterPercentage < 50) {
@@ -225,7 +252,7 @@ export async function generateAssistantMessages(): Promise<AssistantMessage[]> {
     messages.push({
       id: 'workout-done',
       type: 'praise',
-      text: `${userName}, ти спалила ${workoutCalories} ккал на тренуванні! Це еквівалентно ${Math.round(workoutCalories / 7700 * 1000)} г жиру. Ти неймовірна! 🔥`,
+      text: `${userName}, ти ${g.burned} ${workoutCalories} ккал на тренуванні! Це еквівалентно ${Math.round(workoutCalories / 7700 * 1000)} г жиру. Ти неймовірний! 🔥`,
       icon: '🔥',
     });
   }
@@ -236,7 +263,7 @@ export async function generateAssistantMessages(): Promise<AssistantMessage[]> {
       messages.push({
         id: 'weight-losing',
         type: 'praise',
-        text: `${userName}, ти схудла на ${Math.abs(weightChange)} кг! Це результат твоєї роботи! Продовжуй! 🎉`,
+        text: `${userName}, ти ${g.lost} на ${Math.abs(weightChange)} кг! Це результат твоєї роботи! Продовжуй! 🎉`,
         icon: '🎉',
       });
     } else if (profile.goal === 'lose' && weightChange > 0) {
@@ -250,7 +277,7 @@ export async function generateAssistantMessages(): Promise<AssistantMessage[]> {
       messages.push({
         id: 'weight-gain-goal',
         type: 'praise',
-        text: `${userName}, ти набрала ${weightChange} кг! Рухаєшся до мети! Продовжуй тренуватись і правильно харчуватись! 💪`,
+        text: `${userName}, ти ${g.gained} ${weightChange} кг! Рухаєшся до мети! Продовжуй тренуватись і правильно харчуватись! 💪`,
         icon: '💪',
       });
     }
@@ -283,6 +310,5 @@ export async function generateAssistantMessages(): Promise<AssistantMessage[]> {
     });
   }
 
-  // Обмежуємо кількість повідомлень (мінімум 4, максимум 6)
   return messages.slice(0, 6);
 }

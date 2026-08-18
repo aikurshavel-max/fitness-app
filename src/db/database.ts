@@ -11,6 +11,7 @@ export interface UserProfile {
   goalWeightKg: number;
   goal: 'lose' | 'maintain' | 'gain';
   activityLevel: 'sedentary' | 'light' | 'moderate' | 'active';
+  gender: 'male' | 'female';
   createdAt: string;
 }
 
@@ -91,7 +92,7 @@ export class FitnessDatabase extends Dexie {
 
   constructor() {
     super('fitness-app');
-    this.version(2).stores({
+    this.version(3).stores({
       userProfile: '++id',
       foodItems: '++id, name, source',
       foodEntries: '++id, date, meal',
@@ -100,6 +101,12 @@ export class FitnessDatabase extends Dexie {
       photoEntries: '++id, date',
       workoutLogs: '++id, date, type, createdAt',
       userGoals: '++id, type, isActive',
+    }).upgrade(tx => {
+      return tx.table('userProfile').toCollection().modify(profile => {
+        if (!profile.gender) {
+          profile.gender = 'female'; // за замовчуванням жіноча стать
+        }
+      });
     });
   }
 }

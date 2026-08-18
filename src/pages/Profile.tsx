@@ -3,7 +3,11 @@ import { db } from '../db/database';
 import { calculateAll, calculateWaterTarget } from '../utils/calculations';
 import type { ActivityLevel, Goal } from '../utils/calculations';
 
-export default function Profile() {
+interface ProfileProps {
+  onProfileSaved?: () => void;
+}
+
+export default function Profile({ onProfileSaved }: ProfileProps) {
   const [name, setName] = useState('');
   const [birthYear, setBirthYear] = useState(1990);
   const [heightCm, setHeightCm] = useState(165);
@@ -11,9 +15,9 @@ export default function Profile() {
   const [goalWeightKg, setGoalWeightKg] = useState(60);
   const [goal, setGoal] = useState<Goal>('lose');
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>('light');
+  const [gender, setGender] = useState<'male' | 'female'>('female');
   const [isSaved, setIsSaved] = useState(false);
 
-  // Перевірка, чи є збережений профіль
   useEffect(() => {
     db.userProfile.toArray().then((profiles) => {
       if (profiles.length > 0) {
@@ -25,6 +29,7 @@ export default function Profile() {
         setGoalWeightKg(p.goalWeightKg);
         setGoal(p.goal);
         setActivityLevel(p.activityLevel);
+        setGender(p.gender || 'female');
         setIsSaved(true);
       }
     });
@@ -44,13 +49,16 @@ export default function Profile() {
       goalWeightKg,
       goal,
       activityLevel,
+      gender,
       createdAt: new Date().toISOString(),
     };
 
-    // Видаляємо старий профіль, якщо є
     await db.userProfile.clear();
     await db.userProfile.add(profile);
     setIsSaved(true);
+    if (onProfileSaved) {
+      onProfileSaved();
+    }
     alert('Профіль збережено! 🎉');
   };
 
@@ -83,6 +91,37 @@ export default function Profile() {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Твоє імʼя"
           />
+        </div>
+
+        {/* Стать */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Стать
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="gender"
+                value="female"
+                checked={gender === 'female'}
+                onChange={() => setGender('female')}
+                className="w-4 h-4 text-primary focus:ring-primary"
+              />
+              <span>Жінка</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="gender"
+                value="male"
+                checked={gender === 'male'}
+                onChange={() => setGender('male')}
+                className="w-4 h-4 text-primary focus:ring-primary"
+              />
+              <span>Чоловік</span>
+            </label>
+          </div>
         </div>
 
         {/* Рік народження */}
