@@ -15,108 +15,56 @@ body {
   transition: background-color 0.3s ease;
 }
 
-/* ====== ТЕМНА ТЕМА ====== */
+/* ====== ТЕМНА ТЕМА (попередні стилі) ====== */
 .dark body {
   background-color: #111827;
 }
 
-/* Перевизначення Tailwind-класів для темної теми */
 .dark .bg-white {
-  background-color: #1f2937 !important; /* gray-800 */
+  background-color: #1f2937 !important;
 }
 
 .dark .bg-gray-50 {
-  background-color: #374151 !important; /* gray-700 */
+  background-color: #374151 !important;
 }
 
 .dark .bg-gray-100 {
-  background-color: #4b5563 !important; /* gray-600 */
+  background-color: #4b5563 !important;
 }
 
-.dark .bg-pink-50 {
-  background-color: #3b2b3b !important;
-}
+.dark .bg-pink-50 { background-color: #3b2b3b !important; }
+.dark .bg-blue-50 { background-color: #1e3a5f !important; }
+.dark .bg-orange-50 { background-color: #4a2e1e !important; }
+.dark .bg-green-50 { background-color: #1e3a2e !important; }
+.dark .bg-yellow-50 { background-color: #4a3a1e !important; }
+.dark .bg-indigo-50 { background-color: #2e2b4a !important; }
+.dark .bg-purple-50 { background-color: #3a2b4a !important; }
+.dark .bg-red-50 { background-color: #4a2b2b !important; }
 
-.dark .bg-blue-50 {
-  background-color: #1e3a5f !important;
-}
+.dark .text-gray-800 { color: #f3f4f6 !important; }
+.dark .text-gray-700 { color: #e5e7eb !important; }
+.dark .text-gray-600 { color: #d1d5db !important; }
+.dark .text-gray-500 { color: #9ca3af !important; }
+.dark .text-gray-400 { color: #6b7280 !important; }
+.dark .text-gray-300 { color: #4b5563 !important; }
 
-.dark .bg-orange-50 {
-  background-color: #4a2e1e !important;
-}
+.dark .border-gray-200 { border-color: #4b5563 !important; }
+.dark .border-gray-300 { border-color: #6b7280 !important; }
 
-.dark .bg-green-50 {
-  background-color: #1e3a2e !important;
-}
+.dark .bg-primary { background-color: #f472b6 !important; }
+.dark .bg-primary-dark { background-color: #db2777 !important; }
 
-.dark .bg-yellow-50 {
-  background-color: #4a3a1e !important;
-}
-
-.dark .bg-indigo-50 {
-  background-color: #2e2b4a !important;
-}
-
-.dark .bg-purple-50 {
-  background-color: #3a2b4a !important;
-}
-
-.dark .bg-red-50 {
-  background-color: #4a2b2b !important;
-}
-
-.dark .text-gray-800 {
-  color: #f3f4f6 !important; /* gray-100 */
-}
-
-.dark .text-gray-700 {
-  color: #e5e7eb !important; /* gray-200 */
-}
-
-.dark .text-gray-600 {
-  color: #d1d5db !important; /* gray-300 */
-}
-
-.dark .text-gray-500 {
-  color: #9ca3af !important; /* gray-400 */
-}
-
-.dark .text-gray-400 {
-  color: #6b7280 !important; /* gray-500 */
-}
-
-.dark .text-gray-300 {
-  color: #4b5563 !important;
-}
-
-.dark .border-gray-200 {
-  border-color: #4b5563 !important;
-}
-
-.dark .border-gray-300 {
-  border-color: #6b7280 !important;
-}
-
-.dark .bg-primary {
-  background-color: #f472b6 !important;
-}
-
-.dark .bg-primary-dark {
-  background-color: #db2777 !important;
-}
-
-/* ==== ПОЛЯ ВВОДУ ==== */
 .dark input,
 .dark select,
 .dark textarea {
-  background-color: #374151 !important; /* gray-700 */
-  color: #f3f4f6 !important; /* gray-100 */
-  border-color: #4b5563 !important; /* gray-600 */
+  background-color: #374151 !important;
+  color: #f3f4f6 !important;
+  border-color: #4b5563 !important;
 }
 
 .dark input::placeholder,
 .dark textarea::placeholder {
-  color: #9ca3af !important; /* gray-400 */
+  color: #9ca3af !important;
 }
 
 .dark input[type="radio"] {
@@ -125,15 +73,13 @@ body {
   color: #f472b6 !important;
 }
 
-/* ==== ТЕКСТ БІЛЯ РАДІОКНОПОК ==== */
 .dark label span,
 .dark label {
-  color: #f3f4f6 !important; /* gray-100 */
+  color: #f3f4f6 !important;
 }
 
-/* ==== ГРАФІКИ (Recharts) ==== */
 .dark .recharts-text {
-  fill: #d1d5db !important; /* gray-300 */
+  fill: #d1d5db !important;
 }
 
 .dark .recharts-cartesian-axis-tick-value {
@@ -145,7 +91,7 @@ body {
 }
 
 .dark .recharts-cartesian-grid line {
-  stroke: #4b5563 !important; /* gray-600 */
+  stroke: #4b5563 !important;
 }
 
 .dark .recharts-tooltip-wrapper {
@@ -154,13 +100,82 @@ body {
   border-color: #4b5563 !important;
 }
 
-/* Тіні стають менш помітними */
 .dark .shadow-md,
 .dark .shadow-sm {
   box-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
 }
 
-/* Плавний перехід */
+/* ====== АНІМАЦІЇ ====== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseSoft {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+@keyframes progressGrow {
+  from { width: 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+.animate-pulse-soft {
+  animation: pulseSoft 2s ease-in-out infinite;
+}
+
+.animate-progress {
+  animation: progressGrow 0.8s ease-out forwards;
+}
+
+/* Анімація для модальних вікон */
+.fixed.inset-0 {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.fixed.inset-0 > .bg-white {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Анімація для карток на головній */
+.bg-white.rounded-2xl {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+/* Анімація для кнопок при натисканні */
+button:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* Плавний перехід для всіх інтерактивних елементів */
+button, a, input, select, textarea {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+/* Плавний перехід темної теми */
 .dark body,
 .dark .bg-white,
 .dark .bg-gray-50,
