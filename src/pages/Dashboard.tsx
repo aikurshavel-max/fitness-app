@@ -3,7 +3,7 @@ import { db } from '../db/database';
 import { calculateWaterTarget } from '../utils/calculations';
 import WaterTracker from '../components/WaterTracker';
 import AIAssistant from '../components/AIAssistant';
-import { Utensils, Zap, X, Flame } from 'lucide-react';
+import { Utensils, Zap, X, Flame, Bell, Droplets, Dumbbell, Coffee } from 'lucide-react';
 
 type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
@@ -33,6 +33,14 @@ interface FrequentFood {
   count: number;
 }
 
+interface Reminder {
+  id: string;
+  type: 'water' | 'workout' | 'food';
+  text: string;
+  icon: JSX.Element;
+  color: string;
+}
+
 export default function Dashboard() {
   const [waterTarget, setWaterTarget] = useState(2500);
   const [dailyCalories, setDailyCalories] = useState(0);
@@ -44,10 +52,15 @@ export default function Dashboard() {
   const [quickGrams, setQuickGrams] = useState(100);
   const [quickMeal, setQuickMeal] = useState<Meal>('breakfast');
   const [streak, setStreak] = useState(0);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [waterMl, setWaterMl] = useState(0);
+  const [workoutCount, setWorkoutCount] = useState(0);
+  const [foodCount, setFoodCount] = useState(0);
 
   const today = new Date().toISOString().split('T')[0];
 
-  const loadDailyCalories = useCallback(async () => {
+  const loadDailyData = useCallback(async () => {
+    // Калорії
     const entries = await db.foodEntries.where('date').equals(today).toArray();
     let total = 0;
     for (const entry of entries) {
@@ -57,6 +70,16 @@ export default function Dashboard() {
       }
     }
     setDailyCalories(total);
+    setFoodCount(entries.length);
+
+    // Вода
+    const waterLogs = await db.waterLogs.where('date').equals(today).toArray();
+    const waterSum = waterLogs.reduce((acc, log) => acc + log.amountMl, 0);
+    setWaterMl(waterSum);
+
+    // Тренування
+    const workoutLogs = await db.workoutLogs.where('date').equals(today).toArray();
+    setWorkoutCount(workoutLogs.length);
   }, [today]);
 
   const loadFrequentFoods = useCallback(async () => {
@@ -91,42 +114,32 @@ export default function Dashboard() {
     setFrequentFoods(frequent);
   }, []);
 
-  // Розрахунок серії днів
   const calculateStreak = useCallback(async () => {
-    // Отримуємо всі унікальні дати, коли була активність
     const activeDates = new Set<string>();
-
     const foodDates = await db.foodEntries.toArray();
     foodDates.forEach((e) => activeDates.add(e.date));
-
     const waterDates = await db.waterLogs.toArray();
     waterDates.forEach((e) => activeDates.add(e.date));
-
     const workoutDates = await db.workoutLogs.toArray();
     workoutDates.forEach((e) => activeDates.add(e.date));
 
-    // Перевіряємо підряд дні до сьогодні або до останнього активного дня
     let streak = 0;
     let currentDate = new Date();
-    // Якщо сьогодні є активність, рахуємо з сьогодні
     const todayStr = currentDate.toISOString().split('T')[0];
     if (activeDates.has(todayStr)) {
       streak++;
       currentDate.setDate(currentDate.getDate() - 1);
     } else {
-      // Якщо сьогодні ще немає, рахуємо з вчора (серія не зламана, але сьогодні ще не враховано)
       currentDate.setDate(currentDate.getDate() - 1);
       const yesterdayStr = currentDate.toISOString().split('T')[0];
       if (activeDates.has(yesterdayStr)) {
         streak++;
       } else {
-        // Якщо ні сьогодні, ні вчора немає — серія 0
         setStreak(0);
         return;
       }
     }
 
-    // Продовжуємо назад
     while (true) {
       currentDate.setDate(currentDate.getDate() - 1);
       const dateStr = currentDate.toISOString().split('T')[0];
@@ -136,9 +149,81 @@ export default function Dashboard() {
         break;
       }
     }
-
     setStreak(streak);
   }, []);
+
+  // Генерація нагадувань
+  const generateReminders = useCallback(() => {
+    const newReminders: Reminder[] = [];
+    const hour = new Date().getHours();
+
+    // Нагадування про їжу (якщо день і ще не їли)
+    if (foodCount === 0 && hour >= 9 && hour <= 12) {
+      newReminders.push({
+        id: 'food-morning',
+        type: 'food',
+        text: 'Доброго ранку! Не забудь поснідати — це запустить метаболізм! 🍳',
+        icon: <Coffee size={20} className="text-yellow-600" />,
+        color: 'bg-yellow-50 border-yellow-200',
+      });
+    } else if (foodCount === 0 && hour > 12 && hour <= 16) {
+      newReminders.push({
+        id: 'food-day',
+        type: 'food',
+        text: 'Ти ще не їла сьогодні. Час підкріпитися корисною їжею! 🥗',
+        icon: <Utensils size={20} className="text-primary" />,
+        color: 'bg-pink-50 border-pink-200',
+      });
+    } else if (foodCount > 0 && hour >= 18 && hour <= 21) {
+      newReminders.push({
+        id: 'food-evening',
+        type: 'food',
+        text: 'Вечір — гарний час для легкої вечері. Овочі, риба або сир — чудовий вибір! 🌙',
+        icon: <Utensils size={20} className="text-primary" />,
+        color: 'bg-pink-50 border-pink-200',
+      });
+    }
+
+    // Нагадування про воду
+    if (waterMl < waterTarget * 0.5 && hour >= 10) {
+      newReminders.push({
+        id: 'water-reminder',
+        type: 'water',
+        text: `Ти випила ${waterMl} мл з ${waterTarget} мл. Випий зараз склянку води! 💧`,
+        icon: <Droplets size={20} className="text-blue-500" />,
+        color: 'bg-blue-50 border-blue-200',
+      });
+    } else if (waterMl >= waterTarget && hour >= 18) {
+      newReminders.push({
+        id: 'water-great',
+        type: 'water',
+        text: 'Воду випито на 100%! Ти молодець! 🌊',
+        icon: <Droplets size={20} className="text-blue-500" />,
+        color: 'bg-blue-50 border-blue-200',
+      });
+    }
+
+    // Нагадування про тренування
+    if (workoutCount === 0 && hour >= 17 && hour <= 20) {
+      newReminders.push({
+        id: 'workout-reminder',
+        type: 'workout',
+        text: 'Сьогодні ще не було тренування. Навіть 20 хв прогулянки мають значення! 🚶‍♀️',
+        icon: <Dumbbell size={20} className="text-green-600" />,
+        color: 'bg-green-50 border-green-200',
+      });
+    } else if (workoutCount > 0 && hour >= 18) {
+      newReminders.push({
+        id: 'workout-done',
+        type: 'workout',
+        text: 'Тренування сьогодні виконано! Ти неймовірна! 💪',
+        icon: <Dumbbell size={20} className="text-green-600" />,
+        color: 'bg-green-50 border-green-200',
+      });
+    }
+
+    setReminders(newReminders);
+  }, [foodCount, waterMl, waterTarget, workoutCount]);
 
   useEffect(() => {
     db.userProfile.toArray().then((profiles) => {
@@ -160,10 +245,14 @@ export default function Dashboard() {
       }
     });
 
-    loadDailyCalories();
+    loadDailyData();
     loadFrequentFoods();
     calculateStreak();
-  }, [loadDailyCalories, loadFrequentFoods, calculateStreak]);
+  }, [loadDailyData, loadFrequentFoods, calculateStreak]);
+
+  useEffect(() => {
+    generateReminders();
+  }, [generateReminders]);
 
   const handleQuickAdd = async () => {
     if (!quickFood) return;
@@ -178,7 +267,7 @@ export default function Dashboard() {
     setShowQuickAdd(false);
     setQuickFood(null);
     setQuickGrams(100);
-    await loadDailyCalories();
+    await loadDailyData();
     await loadFrequentFoods();
     await calculateStreak();
   };
@@ -195,6 +284,18 @@ export default function Dashboard() {
       <h1 className="text-2xl font-bold text-gray-800 mb-4">
         {userName ? `Привіт, ${userName}! 👋` : 'Сьогодні'}
       </h1>
+
+      {/* Нагадування */}
+      {reminders.length > 0 && (
+        <div className="space-y-2 mb-4">
+          {reminders.map((reminder) => (
+            <div key={reminder.id} className={`border rounded-xl p-3 flex items-start gap-2 ${reminder.color}`}>
+              {reminder.icon}
+              <p className="text-sm text-gray-700 flex-1">{reminder.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Серія днів */}
       <div className="bg-gradient-to-r from-orange-100 to-amber-100 rounded-2xl shadow-sm p-4 mb-4 flex items-center justify-between">
