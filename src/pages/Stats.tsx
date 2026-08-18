@@ -1,21 +1,69 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../db/database';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Plus, Trash2 } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, ReferenceLine } from 'recharts';
+import { Plus, Trash2, TrendingUp } from 'lucide-react';
 
 export default function Stats() {
   const [weightEntries, setWeightEntries] = useState<any[]>([]);
   const [newWeight, setNewWeight] = useState('');
   const [note, setNote] = useState('');
+  const [weeklyCaloriesData, setWeeklyCaloriesData] = useState<any[]>([]);
+  const [targetCalories, setTargetCalories] = useState(2000);
 
   const loadWeights = useCallback(async () => {
     const entries = await db.weightEntries.orderBy('date').toArray();
     setWeightEntries(entries);
   }, []);
 
+  const loadWeeklyCalories = useCallback(async () => {
+    // Отримуємо цільові калорії з профілю
+    const profiles = await db.userProfile.toArray();
+    if (profiles.length > 0) {
+      const p = profiles[0];
+      const activityFactors = {
+        sedentary: 1.2,
+        light: 1.375,
+        moderate: 1.55,
+        active: 1.725,
+      };
+      const bmr = 10 * p.currentWeightKg + 6.25 * p.heightCm - 5 * (new Date().getFullYear() - p.birthYear) - 161;
+      const tdee = Math.round(bmr * activityFactors[p.activityLevel]);
+      const target = p.goal === 'lose' ? Math.round(tdee * 0.85) : p.goal === 'gain' ? Math.round(tdee * 1.15) : tdee;
+      setTargetCalories(target);
+    }
+
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayMonth = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+      days.push({ date: dateStr, label: dayMonth, calories: 0 });
+    }
+
+    const entries = await db.foodEntries.toArray();
+    for (const entry of entries) {
+      const day = days.find((d) => d.date === entry.date);
+      if (day) {
+        const food = await db.foodItems.get(entry.foodId);
+        if (food) {
+          day.calories += Math.round((food.caloriesPer100g * entry.grams) / 100);
+        }
+      }
+    }
+
+    const chartData = days.map((d) => ({
+      date: d.label,
+      Калорії: d.calories,
+      Ціль: targetCalories,
+    }));
+    setWeeklyCaloriesData(chartData);
+  }, [targetCalories]);
+
   useEffect(() => {
     loadWeights();
-  }, [loadWeights]);
+    loadWeeklyCalories();
+  }, [loadWeights, loadWeeklyCalories]);
 
   const handleAddWeight = async () => {
     const weight = parseFloat(newWeight);
@@ -41,25 +89,22 @@ export default function Stats() {
     await loadWeights();
   };
 
-  // Підготовка даних для графіка
   const chartData = weightEntries.map((entry) => ({
     date: entry.date,
     weight: entry.weightKg,
   }));
 
-  // Поточна вага
   const currentWeight = weightEntries.length > 0 
     ? weightEntries[weightEntries.length - 1].weightKg 
     : null;
 
-  // Зміна ваги
   const weightChange = weightEntries.length > 1
     ? Math.round((weightEntries[weightEntries.length - 1].weightKg - weightEntries[0].weightKg) * 10) / 10
     : null;
 
   return (
     <div className="p-4 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold text-gray-800 mb-4">Статистика ваги</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-4">Статистика</h1>
 
       {/* Поточна вага */}
       {currentWeight && (
@@ -81,7 +126,24 @@ export default function Stats() {
         </div>
       )}
 
-      {/* Графік */}
+      {/* Графік калорій за тиждень */}
+      <div className="bg-white rounded-2xl shadow-md p-4 mb-4">
+        <h2 className="font-semibold text-gray-800 mb-3">Калорії за тиждень</h2>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={weeklyCaloriesData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} />
+            <Tooltip />
+            <Legend />
+            <ReferenceLine y={targetCalories} stroke="#f472b6" strokeDasharray="3 3" />
+            <Bar dataKey="Калорії" fill="#f472b6" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Ціль" fill="#e2e8f0" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Графік ваги */}
       {chartData.length > 1 ? (
         <div className="bg-white rounded-2xl shadow-md p-4 mb-4">
           <h2 className="font-semibold text-gray-800 mb-3">Графік зміни ваги</h2>
@@ -103,11 +165,11 @@ export default function Stats() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl shadow-md p-8 mb-4 text-center">
-          <p className="text-gray-400">Додай щонайменше 2 записи, щоб побачити графік</p>
+          <p className="text-gray-400">Додай щонайменше 2 записи ваги, щоб побачити графік</p>
         </div>
       )}
 
-      {/* Форма додавання */}
+      {/* Форма додавання ваги */}
       <div className="bg-white rounded-2xl shadow-md p-4 mb-4">
         <h2 className="font-semibold text-gray-800 mb-3">Додати вагу</h2>
         <div className="flex gap-2 mb-2">
@@ -137,7 +199,7 @@ export default function Stats() {
         />
       </div>
 
-      {/* Список записів */}
+      {/* Список записів ваги */}
       <div className="space-y-2">
         {weightEntries.slice().reverse().map((entry) => (
           <div key={entry.id} className="bg-white rounded-xl shadow-sm p-3 flex items-center justify-between">
