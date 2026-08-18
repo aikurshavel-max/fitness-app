@@ -312,3 +312,123 @@ export async function generateAssistantMessages(): Promise<AssistantMessage[]> {
 
   return messages.slice(0, 6);
 }
+
+// ====== НОВА ФУНКЦІЯ: Тижневий звіт ======
+export async function generateWeeklyReport(): Promise<AssistantMessage> {
+  const profiles = await db.userProfile.toArray();
+  if (profiles.length === 0) {
+    return {
+      id: 'weekly-no-profile',
+      type: 'info',
+      text: 'Заповни профіль, щоб я міг створити тижневий звіт.',
+      icon: '👤',
+    };
+  }
+
+  const profile = profiles[0];
+  const gender = profile.gender || 'female';
+  const g = getGenderForms(gender);
+  const userName = profile.name;
+
+  // Розрахунок цільових калорій
+  const calculation = calculateAll({
+    birthYear: profile.birthYear,
+    heightCm: profile.heightCm,
+    currentWeightKg: profile.currentWeightKg,
+    goalWeightKg: profile.goalWeightKg,
+    goal: profile.goal,
+    activityLevel: profile.activityLevel,
+  });
+  const targetCalories = calculation.targetCalories;
+  const targetProtein = calculation.macros.proteinG;
+
+  // Збираємо дані за 7 днів
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    days.push({ date: dateStr, calories: 0, protein: 0, workouts: 0 });
+  }
+
+  const foodEntries = await db.foodEntries.toArray();
+  for (const entry of foodEntries) {
+    const day = days.find((d) => d.date === entry.date);
+    if (day) {
+      const food = await db.foodItems.get(entry.foodId);
+      if (food) {
+        day.calories += Math.round((food.caloriesPer100g * entry.grams) / 100);
+        day.protein += (food.proteinPer100g * entry.grams) / 100;
+      }
+    }
+  }
+
+  const workoutLogs = await db.workoutLogs.toArray();
+  for (const log of workoutLogs) {
+    const day = days.find((d) => d.date === log.date);
+    if (day) {
+      day.workouts += 1;
+    }
+  }
+
+  // Рахуємо середні значення за дні з записами
+  const daysWithFood = days.filter((d) => d.calories > 0);
+  const avgCalories = daysWithFood.length > 0 
+    ? Math.round(daysWithFood.reduce((acc, d) => acc + d.calories, 0) / daysWithFood.length) 
+    : 0;
+  const avgProtein = daysWithFood.length > 0 
+    ? Math.round(daysWithFood.reduce((acc, d) => acc + d.protein, 0) / daysWithFood.length) 
+    : 0;
+  const totalWorkouts = days.reduce((acc, d) => acc + d.workouts, 0);
+
+  // Зміна ваги за тиждень
+  const weightEntries = await db.weightEntries.orderBy('date').toArray();
+  let weightChange: number | null = null;
+  if (weightEntries.length > 1) {
+    const lastWeight = weightEntries[weightEntries.length - 1].weightKg;
+    const firstWeight = weightEntries[0].weightKg;
+    weightChange = Math.round((lastWeight - firstWeight) * 10) / 10;
+  }
+
+  // Формуємо звіт
+  let text = `${userName}, ось твій тижневий звіт:\n\n`;
+  text += `📊 Середня калорійність: ${avgCalories} ккал (ціль: ${targetCalories} ккал)\n`;
+  text += `🥩 Середній білок: ${avgProtein} г (ціль: ${targetProtein} г)\n`;
+  text += `🏋️‍♀️ Тренувань за тиждень: ${totalWorkouts}\n`;
+
+  if (weightChange !== null) {
+    text += `⚖️ Зміна ваги: ${weightChange > 0 ? '+' : ''}${weightChange} кг\n`;
+  } else {
+    text += `⚖️ Зміна ваги: недостатньо даних\n`;
+  }
+
+  // Аналіз та поради
+  if (avgCalories > 0) {
+    if (avgCalories > targetCalories * 1.1) {
+      text += `\n🔧 Калорій трохи більше, ніж потрібно. Спробуй зменшити порції на 10-15% або додати більше овочів.`;
+    } else if (avgCalories < targetCalories * 0.8) {
+      text += `\n🔧 Калорій замало. Важливо не голодувати — додай корисні перекуси: горіхи, йогурт, фрукти.`;
+    } else {
+      text += `\n✅ Калорійність у чудовому балансі!`;
+    }
+
+    if (avgProtein < targetProtein * 0.8) {
+      text += `\n🔧 Білка замало. Додай яйця, сир, курку або рибу.`;
+    } else {
+      text += `\n✅ Білок на хорошому рівні.`;
+    }
+  }
+
+  if (totalWorkouts < 2) {
+    text += `\n🔧 Тренувань замало. Навіть 2-3 рази на тиждень по 30 хв дадуть результат.`;
+  } else {
+    text += `\n✅ Тренування регулярні, так тримати!`;
+  }
+
+  return {
+    id: 'weekly-report',
+    type: 'info',
+    text,
+    icon: '📊',
+  };
+}
