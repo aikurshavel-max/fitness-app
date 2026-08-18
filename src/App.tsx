@@ -7,6 +7,7 @@ import Goals from './pages/Goals';
 import Profile from './pages/Profile';
 import Photos from './pages/Photos';
 import Workouts from './pages/Workouts';
+import Help from './pages/Help';
 import BottomNav from './components/BottomNav';
 import { db } from './db/database';
 
@@ -14,7 +15,6 @@ export default function App() {
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const [isDark, setIsDark] = useState(false);
 
-  // Ініціалізація теми з localStorage
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
@@ -22,13 +22,11 @@ export default function App() {
     } else if (savedTheme === 'light') {
       setIsDark(false);
     } else {
-      // Якщо немає збереженої, пробуємо системну
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       setIsDark(prefersDark);
     }
   }, []);
 
-  // Застосування класу dark на <html>
   useEffect(() => {
     const root = document.documentElement;
     if (isDark) {
@@ -74,28 +72,11 @@ export default function App() {
               <Route path="/stats" element={<Stats />} />
               <Route path="/photos" element={<Photos />} />
               <Route path="/goals" element={<Goals />} />
-              <Route
-                path="/profile"
-                element={
-                  <Profile
-                    isDark={isDark}
-                    onToggleTheme={() => setIsDark(!isDark)}
-                    onProfileSaved={() => setHasProfile(true)}
-                  />
-                }
-              />
+              <Route path="/profile" element={<Profile isDark={isDark} onToggleTheme={() => setIsDark(!isDark)} onProfileSaved={() => setHasProfile(true)} />} />
+              <Route path="/help" element={<Help />} />
             </>
           ) : (
-            <Route
-              path="*"
-              element={
-                <Profile
-                  isDark={isDark}
-                  onToggleTheme={() => setIsDark(!isDark)}
-                  onProfileSaved={() => setHasProfile(true)}
-                />
-              }
-            />
+            <Route path="*" element={<Profile isDark={isDark} onToggleTheme={() => setIsDark(!isDark)} onProfileSaved={() => setHasProfile(true)} />} />
           )}
         </Routes>
         {hasProfile && <BottomNav />}
