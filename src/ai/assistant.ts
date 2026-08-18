@@ -326,8 +326,6 @@ export async function generateWeeklyReport(): Promise<AssistantMessage> {
   }
 
   const profile = profiles[0];
-  const gender = profile.gender || 'female';
-  const g = getGenderForms(gender);
   const userName = profile.name;
 
   // Розрахунок цільових калорій

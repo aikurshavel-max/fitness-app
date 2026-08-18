@@ -3,7 +3,7 @@ import { db } from '../db/database';
 import { calculateWaterTarget } from '../utils/calculations';
 import WaterTracker from '../components/WaterTracker';
 import AIAssistant from '../components/AIAssistant';
-import { Utensils, Zap, X, Flame, Bell, Droplets, Dumbbell, Coffee } from 'lucide-react';
+import { Utensils, Zap, X, Flame, Droplets, Dumbbell, Coffee } from 'lucide-react';
 
 type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
@@ -33,11 +33,13 @@ interface FrequentFood {
   count: number;
 }
 
+import type { ReactElement } from 'react'; // додай цей рядок на початку файлу (після інших імпортів)
+
 interface Reminder {
   id: string;
   type: 'water' | 'workout' | 'food';
   text: string;
-  icon: JSX.Element;
+  icon: ReactElement;
   color: string;
 }
 

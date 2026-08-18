@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../db/database';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, ReferenceLine } from 'recharts';
-import { Plus, Trash2, TrendingUp } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 export default function Stats() {
   const [weightEntries, setWeightEntries] = useState<any[]>([]);
