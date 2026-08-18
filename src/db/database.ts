@@ -60,13 +60,19 @@ export interface PhotoEntry {
   createdAt: string;
 }
 
+// ====== ОНОВЛЕНИЙ WorkoutLog ======
 export interface WorkoutLog {
   id?: number;
   date: string;
-  type: 'walking' | 'running' | 'strength' | 'yoga' | 'cycling' | 'other';
+  type: 'walking' | 'running' | 'strength' | 'yoga' | 'cycling' | 'exercise' | 'fitness' | 'other';
   durationMin: number;
   caloriesBurned: number;
   notes?: string;
+  // Нові необов’язкові поля:
+  steps?: number;          // для ходьби
+  distanceKm?: number;     // для бігу, велосипеда
+  pace?: 'slow' | 'medium' | 'fast'; // для бігу
+  intensity?: 'light' | 'moderate' | 'high'; // для силових, йоги, зарядки, фітнесу, іншого
   createdAt: string;
 }
 
@@ -101,12 +107,6 @@ export class FitnessDatabase extends Dexie {
       photoEntries: '++id, date',
       workoutLogs: '++id, date, type, createdAt',
       userGoals: '++id, type, isActive',
-    }).upgrade(tx => {
-      return tx.table('userProfile').toCollection().modify(profile => {
-        if (!profile.gender) {
-          profile.gender = 'female'; // за замовчуванням жіноча стать
-        }
-      });
     });
   }
 }
