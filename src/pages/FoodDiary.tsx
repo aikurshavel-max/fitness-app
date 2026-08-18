@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { db } from '../db/database';
 import { searchFoods } from '../data/foodDatabase';
 import type { LocalFoodProduct } from '../data/foodDatabase';
+import { getPortionForFood } from '../data/portionDatabase';
 import { analyzeFoodImage } from '../ai/foodRecognition';
 import type { RecognizedFood } from '../ai/foodRecognition';
 import { Search, Plus, X, Trash2, Camera, Loader2, AlertTriangle, ChefHat, Minus, Copy } from 'lucide-react';
@@ -63,6 +64,7 @@ export default function FoodDiary() {
   const [dishSearchQuery, setDishSearchQuery] = useState('');
   const [dishSearchResults, setDishSearchResults] = useState<LocalFoodProduct[]>([]);
   const [copied, setCopied] = useState(false);
+  const [selectedPortion, setSelectedPortion] = useState<number | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -193,6 +195,7 @@ export default function FoodDiary() {
     setSearchResults([]);
     setShowSearch(false);
     setGrams(100);
+    setSelectedPortion(null);
     await loadEntries();
   };
 
@@ -312,6 +315,7 @@ export default function FoodDiary() {
       setRecognizedFood(null);
       setRecognitionError('');
       setRecognitionGrams(100);
+      setSelectedPortion(null);
       await loadEntries();
     } catch (error) {
       console.error('Помилка додавання розпізнаної їжі:', error);
@@ -358,6 +362,7 @@ export default function FoodDiary() {
       setCustomProtein('');
       setCustomFat('');
       setCustomCarbs('');
+      setSelectedPortion(null);
     }
   };
 
@@ -615,7 +620,10 @@ export default function FoodDiary() {
                     searchResults.map((food) => (
                       <button
                         key={food.name}
-                        onClick={() => setSelectedFood(food)}
+                        onClick={() => {
+                          setSelectedFood(food);
+                          setSelectedPortion(null);
+                        }}
                         className={`w-full text-left p-3 rounded-lg mb-2 transition-colors ${
                           selectedFood?.name === food.name
                             ? 'bg-primary bg-opacity-10 border border-primary'
@@ -661,7 +669,10 @@ export default function FoodDiary() {
                     <input
                       type="number"
                       value={grams}
-                      onChange={(e) => setGrams(Number(e.target.value))}
+                      onChange={(e) => {
+                        setGrams(Number(e.target.value));
+                        setSelectedPortion(null);
+                      }}
                       className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-center"
                       min={1}
                       max={1000}
@@ -669,6 +680,46 @@ export default function FoodDiary() {
                     <span className="text-gray-500">г</span>
                   </div>
                 </div>
+
+                {/* Блок швидкого вибору порції */}
+                {(() => {
+                  const portion = getPortionForFood(selectedFood.name);
+                  if (!portion) return null;
+                  return (
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500 mb-1">Швидкий вибір порції:</p>
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => {
+                            setGrams(portion.grams);
+                            setSelectedPortion(portion.grams);
+                          }}
+                          className={`px-3 py-1 rounded-lg text-sm ${
+                            selectedPortion === portion.grams
+                              ? 'bg-primary text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {portion.label} ({portion.grams} г)
+                        </button>
+                        <button
+                          onClick={() => {
+                            setGrams(100);
+                            setSelectedPortion(null);
+                          }}
+                          className={`px-3 py-1 rounded-lg text-sm ${
+                            selectedPortion === null
+                              ? 'bg-primary text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          100 г
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="text-sm text-gray-600 mb-3 text-center">
                   <p>
                     {(selectedFood.calories * grams / 100).toFixed(0)} ккал | 
