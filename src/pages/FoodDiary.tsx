@@ -4,7 +4,7 @@ import { searchFoods } from '../data/foodDatabase';
 import type { LocalFoodProduct } from '../data/foodDatabase';
 import { analyzeFoodImage } from '../ai/foodRecognition';
 import type { RecognizedFood } from '../ai/foodRecognition';
-import { Search, Plus, X, Trash2, Camera, Loader2, AlertTriangle, ChefHat, Minus } from 'lucide-react';
+import { Search, Plus, X, Trash2, Camera, Loader2, AlertTriangle, ChefHat, Minus, Copy } from 'lucide-react';
 
 type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
@@ -51,23 +51,26 @@ export default function FoodDiary() {
   const [recognizedFood, setRecognizedFood] = useState<RecognizedFood | null>(null);
   const [recognitionError, setRecognitionError] = useState('');
   const [recognitionGrams, setRecognitionGrams] = useState(100);
-
-  // Стани для ручного додавання продукту
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customCalories, setCustomCalories] = useState('');
   const [customProtein, setCustomProtein] = useState('');
   const [customFat, setCustomFat] = useState('');
   const [customCarbs, setCustomCarbs] = useState('');
-
-  // Стани для створення складеної страви
   const [showDishCreator, setShowDishCreator] = useState(false);
   const [dishName, setDishName] = useState('');
   const [dishIngredients, setDishIngredients] = useState<DishIngredient[]>([]);
   const [dishSearchQuery, setDishSearchQuery] = useState('');
   const [dishSearchResults, setDishSearchResults] = useState<LocalFoodProduct[]>([]);
+  const [copied, setCopied] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
+
+  const getYesterday = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  };
 
   const loadEntries = useCallback(async () => {
     const allEntries = await db.foodEntries.where('date').equals(today).toArray();
@@ -96,7 +99,6 @@ export default function FoodDiary() {
     loadEntries();
   }, [loadEntries]);
 
-  // Пошук продуктів: спочатку у статичній базі, потім у доданих (foodItems)
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
     if (query.trim().length > 0) {
@@ -128,7 +130,6 @@ export default function FoodDiary() {
     }
   };
 
-  // Пошук для складеної страви
   const handleDishSearch = async (query: string) => {
     setDishSearchQuery(query);
     if (query.trim().length > 0) {
@@ -198,6 +199,31 @@ export default function FoodDiary() {
   const handleDelete = async (id: number) => {
     await db.foodEntries.delete(id);
     await loadEntries();
+  };
+
+  // ====== Копіювання вчорашнього дня ======
+  const handleCopyYesterday = async () => {
+    const yesterday = getYesterday();
+    const yesterdayEntries = await db.foodEntries.where('date').equals(yesterday).toArray();
+
+    if (yesterdayEntries.length === 0) {
+      alert('Вчора не було записів їжі');
+      return;
+    }
+
+    for (const entry of yesterdayEntries) {
+      await db.foodEntries.add({
+        date: today,
+        meal: entry.meal,
+        foodId: entry.foodId,
+        grams: entry.grams,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    setCopied(true);
+    await loadEntries();
+    setTimeout(() => setCopied(false), 3000);
   };
 
   // ====== Розпізнавання їжі ======
@@ -390,7 +416,6 @@ export default function FoodDiary() {
     const totals = calculateDishTotals();
     const per100 = totals.per100;
 
-    // Зберігаємо як продукт у foodItems
     await db.foodItems.add({
       name: dishName.trim(),
       caloriesPer100g: per100.calories,
@@ -400,7 +425,6 @@ export default function FoodDiary() {
       source: 'manual',
     });
 
-    // Очищаємо форму та закриваємо
     setDishName('');
     setDishIngredients([]);
     setDishSearchQuery('');
@@ -423,6 +447,17 @@ export default function FoodDiary() {
   return (
     <div className="p-4 max-w-md mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-4">Щоденник харчування</h1>
+
+      {/* Копіювання вчорашнього дня */}
+      <button
+        onClick={handleCopyYesterday}
+        className={`w-full mb-4 py-2 px-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${
+          copied ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+        }`}
+      >
+        <Copy size={16} />
+        {copied ? 'Скопійовано!' : 'Скопіювати вчорашній день'}
+      </button>
 
       {/* Підсумок дня */}
       <div className="bg-white rounded-2xl shadow-md p-4 mb-4">
