@@ -41,13 +41,19 @@ export default function FoodDiary() {
   const [grams, setGrams] = useState(100);
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [showSearch, setShowSearch] = useState(false);
-
-  // Состояния для распознавания
   const [showRecognition, setShowRecognition] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [recognizedFood, setRecognizedFood] = useState<RecognizedFood | null>(null);
   const [recognitionError, setRecognitionError] = useState('');
   const [recognitionGrams, setRecognitionGrams] = useState(100);
+
+  // Станы для ручного додавання продукту
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customCalories, setCustomCalories] = useState('');
+  const [customProtein, setCustomProtein] = useState('');
+  const [customFat, setCustomFat] = useState('');
+  const [customCarbs, setCustomCarbs] = useState('');
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -127,7 +133,7 @@ export default function FoodDiary() {
     await loadEntries();
   };
 
-  // ====== РАСПОЗНАВАНИЕ ======
+  // ====== Розпізнавання їжі ======
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -137,7 +143,6 @@ export default function FoodDiary() {
     setRecognizedFood(null);
 
     try {
-      // Сжимаем изображение перед отправкой
       const compressed = await compressImage(file);
       const result = await analyzeFoodImage(compressed);
       setRecognizedFood(result);
@@ -210,7 +215,6 @@ export default function FoodDiary() {
         });
       }
 
-      // Сброс состояний
       setShowRecognition(false);
       setRecognizedFood(null);
       setRecognitionError('');
@@ -219,6 +223,49 @@ export default function FoodDiary() {
     } catch (error) {
       console.error('Помилка додавання розпізнаної їжі:', error);
       alert('Не вдалося додати страву. Спробуй ще раз.');
+    }
+  };
+
+  // ====== Ручне додавання продукту ======
+  const handleAddCustomFood = async () => {
+    if (!customName.trim()) {
+      alert('Введи назву продукту');
+      return;
+    }
+    const calories = parseFloat(customCalories) || 0;
+    const protein = parseFloat(customProtein) || 0;
+    const fat = parseFloat(customFat) || 0;
+    const carbs = parseFloat(customCarbs) || 0;
+
+    // Перевіряємо, чи є вже такий продукт у базі foodItems
+    let existingFood = await db.foodItems.where('name').equals(customName.trim()).first();
+    if (!existingFood) {
+      const newFoodId = await db.foodItems.add({
+        name: customName.trim(),
+        caloriesPer100g: calories,
+        proteinPer100g: protein,
+        fatPer100g: fat,
+        carbsPer100g: carbs,
+        source: 'manual',
+      });
+      existingFood = await db.foodItems.get(newFoodId);
+    }
+
+    if (existingFood) {
+      setSelectedFood({
+        name: existingFood.name,
+        calories: existingFood.caloriesPer100g,
+        protein: existingFood.proteinPer100g,
+        fat: existingFood.fatPer100g,
+        carbs: existingFood.carbsPer100g,
+        category: 'Інше', // додаємо, щоб задовольнити тип LocalFoodProduct
+      });
+      setShowCustomForm(false);
+      setCustomName('');
+      setCustomCalories('');
+      setCustomProtein('');
+      setCustomFat('');
+      setCustomCarbs('');
     }
   };
 
@@ -277,7 +324,7 @@ export default function FoodDiary() {
         ))}
       </div>
 
-      {/* Кнопки добавления */}
+      {/* Кнопки додавання */}
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => setShowSearch(true)}
@@ -295,7 +342,7 @@ export default function FoodDiary() {
         </button>
       </div>
 
-      {/* Модальное окно ручного добавления */}
+      {/* Модальне вікно ручного додавання */}
       {showSearch && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col">
@@ -323,34 +370,103 @@ export default function FoodDiary() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">
-              {searchResults.length > 0 ? (
-                searchResults.map((food) => (
-                  <button
-                    key={food.name}
-                    onClick={() => setSelectedFood(food)}
-                    className={`w-full text-left p-3 rounded-lg mb-2 transition-colors ${
-                      selectedFood?.name === food.name
-                        ? 'bg-primary bg-opacity-10 border border-primary'
-                        : 'bg-gray-50 hover:bg-gray-100'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-gray-800">{food.name}</span>
-                      <span className="text-sm text-gray-500">{food.calories} ккал/100г</span>
+              {showCustomForm ? (
+                <div>
+                  <h3 className="font-medium text-gray-700 mb-2">Новий продукт</h3>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      placeholder="Назва (напр., Кукурудза)"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        value={customCalories}
+                        onChange={(e) => setCustomCalories(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        placeholder="Ккал/100г"
+                      />
+                      <input
+                        type="number"
+                        value={customProtein}
+                        onChange={(e) => setCustomProtein(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        placeholder="Білки г/100г"
+                      />
+                      <input
+                        type="number"
+                        value={customFat}
+                        onChange={(e) => setCustomFat(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        placeholder="Жири г/100г"
+                      />
+                      <input
+                        type="number"
+                        value={customCarbs}
+                        onChange={(e) => setCustomCarbs(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        placeholder="Вуглеводи г/100г"
+                      />
                     </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      Б: {food.protein}г | Ж: {food.fat}г | В: {food.carbs}г
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleAddCustomFood}
+                        className="flex-1 bg-primary text-white py-2 rounded-lg font-medium hover:bg-primary-dark transition-colors"
+                      >
+                        Зберегти продукт
+                      </button>
+                      <button
+                        onClick={() => setShowCustomForm(false)}
+                        className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
+                      >
+                        Скасувати
+                      </button>
                     </div>
-                  </button>
-                ))
+                  </div>
+                </div>
               ) : (
-                <p className="text-center text-gray-500 py-8">
-                  {searchQuery ? 'Нічого не знайдено' : 'Введи назву продукту'}
-                </p>
+                <>
+                  {searchResults.length > 0 ? (
+                    searchResults.map((food) => (
+                      <button
+                        key={food.name}
+                        onClick={() => setSelectedFood(food)}
+                        className={`w-full text-left p-3 rounded-lg mb-2 transition-colors ${
+                          selectedFood?.name === food.name
+                            ? 'bg-primary bg-opacity-10 border border-primary'
+                            : 'bg-gray-50 hover:bg-gray-100'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-gray-800">{food.name}</span>
+                          <span className="text-sm text-gray-500">{food.calories} ккал/100г</span>
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          Б: {food.protein}г | Ж: {food.fat}г | В: {food.carbs}г
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-gray-500 mb-3">
+                        {searchQuery ? 'Нічого не знайдено' : 'Введи назву продукту'}
+                      </p>
+                      <button
+                        onClick={() => setShowCustomForm(true)}
+                        className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                      >
+                        ➕ Додати свій продукт
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
-            {selectedFood && (
+            {selectedFood && !showCustomForm && (
               <div className="p-4 border-t border-gray-200">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex-1">
@@ -391,7 +507,7 @@ export default function FoodDiary() {
         </div>
       )}
 
-      {/* Модальное окно распознавания */}
+      {/* Модальне вікно розпізнавання */}
       {showRecognition && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
