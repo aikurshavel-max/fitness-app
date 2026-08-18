@@ -12,6 +12,33 @@ import { db } from './db/database';
 
 export default function App() {
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+  const [isDark, setIsDark] = useState(false);
+
+  // Ініціалізація теми з localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      setIsDark(true);
+    } else if (savedTheme === 'light') {
+      setIsDark(false);
+    } else {
+      // Якщо немає збереженої, пробуємо системну
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setIsDark(prefersDark);
+    }
+  }, []);
+
+  // Застосування класу dark на <html>
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
 
   useEffect(() => {
     db.open()
@@ -29,7 +56,7 @@ export default function App() {
 
   if (hasProfile === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <p className="text-gray-500">Завантаження...</p>
       </div>
     );
@@ -37,7 +64,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="pb-16 min-h-screen">
+      <div className="pb-16 min-h-screen bg-background">
         <Routes>
           {hasProfile ? (
             <>
@@ -47,10 +74,28 @@ export default function App() {
               <Route path="/stats" element={<Stats />} />
               <Route path="/photos" element={<Photos />} />
               <Route path="/goals" element={<Goals />} />
-              <Route path="/profile" element={<Profile />} />
+              <Route
+                path="/profile"
+                element={
+                  <Profile
+                    isDark={isDark}
+                    onToggleTheme={() => setIsDark(!isDark)}
+                    onProfileSaved={() => setHasProfile(true)}
+                  />
+                }
+              />
             </>
           ) : (
-            <Route path="*" element={<Profile onProfileSaved={() => setHasProfile(true)} />} />
+            <Route
+              path="*"
+              element={
+                <Profile
+                  isDark={isDark}
+                  onToggleTheme={() => setIsDark(!isDark)}
+                  onProfileSaved={() => setHasProfile(true)}
+                />
+              }
+            />
           )}
         </Routes>
         {hasProfile && <BottomNav />}

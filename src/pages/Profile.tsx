@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import { db } from '../db/database';
 import { calculateAll, calculateWaterTarget } from '../utils/calculations';
 import type { ActivityLevel, Goal } from '../utils/calculations';
-import { Download, Upload, Save } from 'lucide-react';
+import { Download, Upload, Save, Moon, Sun } from 'lucide-react';
 
 interface ProfileProps {
+  isDark?: boolean;
+  onToggleTheme?: () => void;
   onProfileSaved?: () => void;
 }
 
-export default function Profile({ onProfileSaved }: ProfileProps) {
+export default function Profile({ isDark, onToggleTheme, onProfileSaved }: ProfileProps) {
   const [name, setName] = useState('');
   const [birthYear, setBirthYear] = useState(1990);
   const [heightCm, setHeightCm] = useState(165);
@@ -124,7 +126,6 @@ export default function Profile({ onProfileSaved }: ProfileProps) {
 
           const data = json.data;
 
-          // Очищаємо всі таблиці (крім фото, якщо не експортуємо)
           await db.userProfile.clear();
           await db.foodItems.clear();
           await db.foodEntries.clear();
@@ -133,7 +134,6 @@ export default function Profile({ onProfileSaved }: ProfileProps) {
           await db.workoutLogs.clear();
           await db.userGoals.clear();
 
-          // Додаємо дані
           if (data.userProfile) await db.userProfile.bulkAdd(data.userProfile);
           if (data.foodItems) await db.foodItems.bulkAdd(data.foodItems);
           if (data.foodEntries) await db.foodEntries.bulkAdd(data.foodEntries);
@@ -142,7 +142,6 @@ export default function Profile({ onProfileSaved }: ProfileProps) {
           if (data.workoutLogs) await db.workoutLogs.bulkAdd(data.workoutLogs);
           if (data.userGoals) await db.userGoals.bulkAdd(data.userGoals);
 
-          // Оновлюємо профіль на екрані
           if (data.userProfile && data.userProfile.length > 0) {
             const p = data.userProfile[0];
             setName(p.name);
@@ -182,6 +181,15 @@ export default function Profile({ onProfileSaved }: ProfileProps) {
   return (
     <div className="p-4 max-w-md mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-4">Профіль</h1>
+
+      {/* Перемикач теми */}
+      <button
+        onClick={onToggleTheme}
+        className="w-full mb-4 py-2 px-4 rounded-xl font-medium bg-white shadow-sm border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+      >
+        {isDark ? <Sun size={18} className="text-yellow-500" /> : <Moon size={18} className="text-gray-600" />}
+        {isDark ? 'Світла тема' : 'Темна тема'}
+      </button>
 
       {/* Форма */}
       <div className="bg-white rounded-2xl shadow-md p-6 space-y-4">

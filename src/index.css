@@ -12,4 +12,164 @@ body {
   background-color: var(--color-background);
   margin: 0;
   -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.3s ease;
+}
+
+/* ====== ТЕМНА ТЕМА ====== */
+.dark body {
+  background-color: #111827;
+}
+
+/* Перевизначення Tailwind-класів для темної теми */
+.dark .bg-white {
+  background-color: #1f2937 !important; /* gray-800 */
+}
+
+.dark .bg-gray-50 {
+  background-color: #374151 !important; /* gray-700 */
+}
+
+.dark .bg-gray-100 {
+  background-color: #4b5563 !important; /* gray-600 */
+}
+
+.dark .bg-pink-50 {
+  background-color: #3b2b3b !important;
+}
+
+.dark .bg-blue-50 {
+  background-color: #1e3a5f !important;
+}
+
+.dark .bg-orange-50 {
+  background-color: #4a2e1e !important;
+}
+
+.dark .bg-green-50 {
+  background-color: #1e3a2e !important;
+}
+
+.dark .bg-yellow-50 {
+  background-color: #4a3a1e !important;
+}
+
+.dark .bg-indigo-50 {
+  background-color: #2e2b4a !important;
+}
+
+.dark .bg-purple-50 {
+  background-color: #3a2b4a !important;
+}
+
+.dark .bg-red-50 {
+  background-color: #4a2b2b !important;
+}
+
+.dark .text-gray-800 {
+  color: #f3f4f6 !important; /* gray-100 */
+}
+
+.dark .text-gray-700 {
+  color: #e5e7eb !important; /* gray-200 */
+}
+
+.dark .text-gray-600 {
+  color: #d1d5db !important; /* gray-300 */
+}
+
+.dark .text-gray-500 {
+  color: #9ca3af !important; /* gray-400 */
+}
+
+.dark .text-gray-400 {
+  color: #6b7280 !important; /* gray-500 */
+}
+
+.dark .text-gray-300 {
+  color: #4b5563 !important;
+}
+
+.dark .border-gray-200 {
+  border-color: #4b5563 !important;
+}
+
+.dark .border-gray-300 {
+  border-color: #6b7280 !important;
+}
+
+.dark .bg-primary {
+  background-color: #f472b6 !important;
+}
+
+.dark .bg-primary-dark {
+  background-color: #db2777 !important;
+}
+
+/* ==== ПОЛЯ ВВОДУ ==== */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #374151 !important; /* gray-700 */
+  color: #f3f4f6 !important; /* gray-100 */
+  border-color: #4b5563 !important; /* gray-600 */
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #9ca3af !important; /* gray-400 */
+}
+
+.dark input[type="radio"] {
+  accent-color: #f472b6;
+  background-color: transparent !important;
+  color: #f472b6 !important;
+}
+
+/* ==== ТЕКСТ БІЛЯ РАДІОКНОПОК ==== */
+.dark label span,
+.dark label {
+  color: #f3f4f6 !important; /* gray-100 */
+}
+
+/* ==== ГРАФІКИ (Recharts) ==== */
+.dark .recharts-text {
+  fill: #d1d5db !important; /* gray-300 */
+}
+
+.dark .recharts-cartesian-axis-tick-value {
+  fill: #d1d5db !important;
+}
+
+.dark .recharts-legend-item-text {
+  color: #e5e7eb !important;
+}
+
+.dark .recharts-cartesian-grid line {
+  stroke: #4b5563 !important; /* gray-600 */
+}
+
+.dark .recharts-tooltip-wrapper {
+  background-color: #1f2937 !important;
+  color: #f3f4f6 !important;
+  border-color: #4b5563 !important;
+}
+
+/* Тіні стають менш помітними */
+.dark .shadow-md,
+.dark .shadow-sm {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
+}
+
+/* Плавний перехід */
+.dark body,
+.dark .bg-white,
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .text-gray-800,
+.dark .text-gray-700,
+.dark input,
+.dark select,
+.dark textarea,
+.dark label {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
