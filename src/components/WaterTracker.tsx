@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../db/database';
-import { Droplets, Plus, Minus } from 'lucide-react';
+import { Droplets, Minus } from 'lucide-react';
 
 interface WaterTrackerProps {
   waterTarget: number;

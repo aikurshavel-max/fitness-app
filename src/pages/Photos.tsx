@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from '../db/database';
-import { Camera, Trash2, X, ZoomIn } from 'lucide-react';
+import { Camera, Trash2, X } from 'lucide-react';
 
 export default function Photos() {
   const [photos, setPhotos] = useState<any[]>([]);
