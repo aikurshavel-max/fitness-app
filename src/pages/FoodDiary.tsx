@@ -4,7 +4,7 @@ import { searchFoods } from '../data/foodDatabase';
 import type { LocalFoodProduct } from '../data/foodDatabase';
 import { analyzeFoodImage } from '../ai/foodRecognition';
 import type { RecognizedFood } from '../ai/foodRecognition';
-import { Search, Plus, X, Trash2, Camera, Loader2, AlertTriangle } from 'lucide-react';
+import { Search, Plus, X, Trash2, Camera, Loader2, AlertTriangle, ChefHat, Minus } from 'lucide-react';
 
 type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
@@ -33,6 +33,11 @@ interface DiaryEntry {
   carbs: number;
 }
 
+interface DishIngredient {
+  food: LocalFoodProduct;
+  grams: number;
+}
+
 export default function FoodDiary() {
   const [selectedMeal, setSelectedMeal] = useState<Meal>('breakfast');
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,13 +52,20 @@ export default function FoodDiary() {
   const [recognitionError, setRecognitionError] = useState('');
   const [recognitionGrams, setRecognitionGrams] = useState(100);
 
-  // Станы для ручного додавання продукту
+  // Стани для ручного додавання продукту
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customCalories, setCustomCalories] = useState('');
   const [customProtein, setCustomProtein] = useState('');
   const [customFat, setCustomFat] = useState('');
   const [customCarbs, setCustomCarbs] = useState('');
+
+  // Стани для створення складеної страви
+  const [showDishCreator, setShowDishCreator] = useState(false);
+  const [dishName, setDishName] = useState('');
+  const [dishIngredients, setDishIngredients] = useState<DishIngredient[]>([]);
+  const [dishSearchQuery, setDishSearchQuery] = useState('');
+  const [dishSearchResults, setDishSearchResults] = useState<LocalFoodProduct[]>([]);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -84,12 +96,67 @@ export default function FoodDiary() {
     loadEntries();
   }, [loadEntries]);
 
-  const handleSearch = (query: string) => {
+  // Пошук продуктів: спочатку у статичній базі, потім у доданих (foodItems)
+  const handleSearch = async (query: string) => {
     setSearchQuery(query);
     if (query.trim().length > 0) {
-      setSearchResults(searchFoods(query).slice(0, 20));
+      const localResults = searchFoods(query).slice(0, 20);
+      const customResults = await db.foodItems
+        .filter((f) => f.name.toLowerCase().includes(query.toLowerCase()))
+        .limit(20)
+        .toArray();
+
+      const customMapped: LocalFoodProduct[] = customResults.map((f) => ({
+        name: f.name,
+        calories: f.caloriesPer100g,
+        protein: f.proteinPer100g,
+        fat: f.fatPer100g,
+        carbs: f.carbsPer100g,
+        category: 'Інше',
+      }));
+
+      const combined = [...localResults];
+      customMapped.forEach((c) => {
+        if (!combined.find((item) => item.name === c.name)) {
+          combined.push(c);
+        }
+      });
+
+      setSearchResults(combined.slice(0, 20));
     } else {
       setSearchResults([]);
+    }
+  };
+
+  // Пошук для складеної страви
+  const handleDishSearch = async (query: string) => {
+    setDishSearchQuery(query);
+    if (query.trim().length > 0) {
+      const localResults = searchFoods(query).slice(0, 20);
+      const customResults = await db.foodItems
+        .filter((f) => f.name.toLowerCase().includes(query.toLowerCase()))
+        .limit(20)
+        .toArray();
+
+      const customMapped: LocalFoodProduct[] = customResults.map((f) => ({
+        name: f.name,
+        calories: f.caloriesPer100g,
+        protein: f.proteinPer100g,
+        fat: f.fatPer100g,
+        carbs: f.carbsPer100g,
+        category: 'Інше',
+      }));
+
+      const combined = [...localResults];
+      customMapped.forEach((c) => {
+        if (!combined.find((item) => item.name === c.name)) {
+          combined.push(c);
+        }
+      });
+
+      setDishSearchResults(combined.slice(0, 20));
+    } else {
+      setDishSearchResults([]);
     }
   };
 
@@ -237,7 +304,6 @@ export default function FoodDiary() {
     const fat = parseFloat(customFat) || 0;
     const carbs = parseFloat(customCarbs) || 0;
 
-    // Перевіряємо, чи є вже такий продукт у базі foodItems
     let existingFood = await db.foodItems.where('name').equals(customName.trim()).first();
     if (!existingFood) {
       const newFoodId = await db.foodItems.add({
@@ -258,7 +324,7 @@ export default function FoodDiary() {
         protein: existingFood.proteinPer100g,
         fat: existingFood.fatPer100g,
         carbs: existingFood.carbsPer100g,
-        category: 'Інше', // додаємо, щоб задовольнити тип LocalFoodProduct
+        category: 'Інше',
       });
       setShowCustomForm(false);
       setCustomName('');
@@ -267,6 +333,80 @@ export default function FoodDiary() {
       setCustomFat('');
       setCustomCarbs('');
     }
+  };
+
+  // ====== Створення складеної страви ======
+  const addIngredient = (food: LocalFoodProduct) => {
+    setDishIngredients((prev) => [...prev, { food, grams: 100 }]);
+    setDishSearchQuery('');
+    setDishSearchResults([]);
+  };
+
+  const removeIngredient = (index: number) => {
+    setDishIngredients((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateIngredientGrams = (index: number, grams: number) => {
+    setDishIngredients((prev) =>
+      prev.map((ing, i) => (i === index ? { ...ing, grams } : ing))
+    );
+  };
+
+  const calculateDishTotals = () => {
+    let totalGrams = 0;
+    let totalCalories = 0;
+    let totalProtein = 0;
+    let totalFat = 0;
+    let totalCarbs = 0;
+
+    dishIngredients.forEach(({ food, grams }) => {
+      totalGrams += grams;
+      totalCalories += (food.calories * grams) / 100;
+      totalProtein += (food.protein * grams) / 100;
+      totalFat += (food.fat * grams) / 100;
+      totalCarbs += (food.carbs * grams) / 100;
+    });
+
+    const per100 = {
+      calories: totalGrams > 0 ? Math.round(totalCalories / totalGrams * 100) : 0,
+      protein: totalGrams > 0 ? Math.round((totalProtein / totalGrams * 100) * 10) / 10 : 0,
+      fat: totalGrams > 0 ? Math.round((totalFat / totalGrams * 100) * 10) / 10 : 0,
+      carbs: totalGrams > 0 ? Math.round((totalCarbs / totalGrams * 100) * 10) / 10 : 0,
+    };
+
+    return { totalGrams, totalCalories: Math.round(totalCalories), totalProtein: Math.round(totalProtein * 10) / 10, totalFat: Math.round(totalFat * 10) / 10, totalCarbs: Math.round(totalCarbs * 10) / 10, per100 };
+  };
+
+  const handleSaveDish = async () => {
+    if (!dishName.trim()) {
+      alert('Введи назву страви');
+      return;
+    }
+    if (dishIngredients.length === 0) {
+      alert('Додай хоча б один інгредієнт');
+      return;
+    }
+
+    const totals = calculateDishTotals();
+    const per100 = totals.per100;
+
+    // Зберігаємо як продукт у foodItems
+    await db.foodItems.add({
+      name: dishName.trim(),
+      caloriesPer100g: per100.calories,
+      proteinPer100g: per100.protein,
+      fatPer100g: per100.fat,
+      carbsPer100g: per100.carbs,
+      source: 'manual',
+    });
+
+    // Очищаємо форму та закриваємо
+    setDishName('');
+    setDishIngredients([]);
+    setDishSearchQuery('');
+    setDishSearchResults([]);
+    setShowDishCreator(false);
+    alert('Страву збережено! Тепер її можна знайти в пошуку.');
   };
 
   const totals = entries.reduce(
@@ -339,6 +479,13 @@ export default function FoodDiary() {
         >
           <Camera size={20} />
           Розпізнати
+        </button>
+        <button
+          onClick={() => setShowDishCreator(true)}
+          className="flex-1 bg-blue-500 text-white py-3 rounded-xl font-medium hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+        >
+          <ChefHat size={20} />
+          Створити страву
         </button>
       </div>
 
@@ -638,6 +785,102 @@ export default function FoodDiary() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальне вікно створення складеної страви */}
+      {showDishCreator && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-800">Створити страву</h2>
+              <button onClick={() => setShowDishCreator(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Назва страви</label>
+                <input
+                  type="text"
+                  value={dishName}
+                  onChange={(e) => setDishName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Напр., Мій салат"
+                />
+              </div>
+
+              <div className="mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Пошук інгредієнта</label>
+                <div className="relative">
+                  <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={dishSearchQuery}
+                    onChange={(e) => handleDishSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Введи назву..."
+                  />
+                </div>
+                {dishSearchResults.length > 0 && (
+                  <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                    {dishSearchResults.map((food) => (
+                      <button
+                        key={food.name}
+                        onClick={() => addIngredient(food)}
+                        className="w-full text-left p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <span className="font-medium">{food.name}</span>
+                        <span className="text-xs text-gray-500 ml-2">{food.calories} ккал/100г</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {dishIngredients.length > 0 && (
+                <div className="mb-3">
+                  <h3 className="font-medium text-gray-700 mb-2">Інгредієнти:</h3>
+                  <div className="space-y-2">
+                    {dishIngredients.map((ing, index) => (
+                      <div key={index} className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
+                        <span className="flex-1 text-sm">{ing.food.name}</span>
+                        <input
+                          type="number"
+                          value={ing.grams}
+                          onChange={(e) => updateIngredientGrams(index, Number(e.target.value))}
+                          className="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+                          min={1}
+                        />
+                        <span className="text-xs text-gray-500">г</span>
+                        <button onClick={() => removeIngredient(index)} className="text-gray-400 hover:text-red-500">
+                          <Minus size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {dishIngredients.length > 0 && (
+                <div className="bg-blue-50 rounded-xl p-3 mb-3">
+                  <p className="text-sm font-semibold text-gray-700">Разом:</p>
+                  <p className="text-sm">Загальна вага: {calculateDishTotals().totalGrams} г</p>
+                  <p className="text-sm">Калорії: {calculateDishTotals().totalCalories} ккал</p>
+                  <p className="text-sm">Білки: {calculateDishTotals().totalProtein} г, Жири: {calculateDishTotals().totalFat} г, Вуглеводи: {calculateDishTotals().totalCarbs} г</p>
+                  <p className="text-sm">На 100 г: {calculateDishTotals().per100.calories} ккал, Б: {calculateDishTotals().per100.protein} г, Ж: {calculateDishTotals().per100.fat} г, В: {calculateDishTotals().per100.carbs} г</p>
+                </div>
+              )}
+
+              <button
+                onClick={handleSaveDish}
+                className="w-full bg-blue-500 text-white py-3 rounded-xl font-medium hover:bg-blue-600 transition-colors"
+              >
+                Зберегти страву
+              </button>
             </div>
           </div>
         </div>
