@@ -3,7 +3,7 @@ import { db } from '../db/database';
 import { calculateWaterTarget } from '../utils/calculations';
 import WaterTracker from '../components/WaterTracker';
 import AIAssistant from '../components/AIAssistant';
-import { Utensils, Zap, X } from 'lucide-react';
+import { Utensils, Zap, X, Flame } from 'lucide-react';
 
 type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
@@ -43,6 +43,7 @@ export default function Dashboard() {
   const [quickFood, setQuickFood] = useState<FrequentFood['food'] | null>(null);
   const [quickGrams, setQuickGrams] = useState(100);
   const [quickMeal, setQuickMeal] = useState<Meal>('breakfast');
+  const [streak, setStreak] = useState(0);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -90,6 +91,55 @@ export default function Dashboard() {
     setFrequentFoods(frequent);
   }, []);
 
+  // Розрахунок серії днів
+  const calculateStreak = useCallback(async () => {
+    // Отримуємо всі унікальні дати, коли була активність
+    const activeDates = new Set<string>();
+
+    const foodDates = await db.foodEntries.toArray();
+    foodDates.forEach((e) => activeDates.add(e.date));
+
+    const waterDates = await db.waterLogs.toArray();
+    waterDates.forEach((e) => activeDates.add(e.date));
+
+    const workoutDates = await db.workoutLogs.toArray();
+    workoutDates.forEach((e) => activeDates.add(e.date));
+
+    // Перевіряємо підряд дні до сьогодні або до останнього активного дня
+    let streak = 0;
+    let currentDate = new Date();
+    // Якщо сьогодні є активність, рахуємо з сьогодні
+    const todayStr = currentDate.toISOString().split('T')[0];
+    if (activeDates.has(todayStr)) {
+      streak++;
+      currentDate.setDate(currentDate.getDate() - 1);
+    } else {
+      // Якщо сьогодні ще немає, рахуємо з вчора (серія не зламана, але сьогодні ще не враховано)
+      currentDate.setDate(currentDate.getDate() - 1);
+      const yesterdayStr = currentDate.toISOString().split('T')[0];
+      if (activeDates.has(yesterdayStr)) {
+        streak++;
+      } else {
+        // Якщо ні сьогодні, ні вчора немає — серія 0
+        setStreak(0);
+        return;
+      }
+    }
+
+    // Продовжуємо назад
+    while (true) {
+      currentDate.setDate(currentDate.getDate() - 1);
+      const dateStr = currentDate.toISOString().split('T')[0];
+      if (activeDates.has(dateStr)) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    setStreak(streak);
+  }, []);
+
   useEffect(() => {
     db.userProfile.toArray().then((profiles) => {
       if (profiles.length > 0) {
@@ -112,7 +162,8 @@ export default function Dashboard() {
 
     loadDailyCalories();
     loadFrequentFoods();
-  }, [loadDailyCalories, loadFrequentFoods]);
+    calculateStreak();
+  }, [loadDailyCalories, loadFrequentFoods, calculateStreak]);
 
   const handleQuickAdd = async () => {
     if (!quickFood) return;
@@ -129,6 +180,7 @@ export default function Dashboard() {
     setQuickGrams(100);
     await loadDailyCalories();
     await loadFrequentFoods();
+    await calculateStreak();
   };
 
   const openQuickAdd = (food: FrequentFood['food']) => {
@@ -143,6 +195,18 @@ export default function Dashboard() {
       <h1 className="text-2xl font-bold text-gray-800 mb-4">
         {userName ? `Привіт, ${userName}! 👋` : 'Сьогодні'}
       </h1>
+
+      {/* Серія днів */}
+      <div className="bg-gradient-to-r from-orange-100 to-amber-100 rounded-2xl shadow-sm p-4 mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Flame size={32} className={streak > 0 ? 'text-orange-500' : 'text-gray-400'} />
+          <div>
+            <p className="text-sm text-gray-600">Серія днів</p>
+            <p className="text-2xl font-bold text-orange-600">{streak} {streak === 1 ? 'день' : 'днів'}</p>
+          </div>
+        </div>
+        {streak >= 7 && <span className="text-2xl">🏆</span>}
+      </div>
 
       {/* AI-асистент */}
       <AIAssistant />
